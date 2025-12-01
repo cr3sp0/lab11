@@ -7,8 +7,10 @@ import java.awt.GridLayout;
 import java.awt.LayoutManager;
 import java.awt.Toolkit;
 import java.io.Serial;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -29,7 +31,8 @@ import javax.swing.JTextArea;
  * <br>
  * 4) List all the words in alphabetical order
  * <br>
- * 5) Write the count for each word, e.g. "word word pippo" should output "pippo -> 1 word -> 2"
+ * 5) Write the count for each word, e.g. "word word pippo" should output "pippo
+ * -> 1 word -> 2"
  *
  */
 public final class LambdaFilter extends JFrame {
@@ -41,7 +44,16 @@ public final class LambdaFilter extends JFrame {
         /**
          * Commands.
          */
-        IDENTITY("No modifications", Function.identity());
+        IDENTITY("No modifications", Function.identity()),
+        TO_LOWERCASE("To lowercase", t -> t.toLowerCase()),
+        CHAR_COUNT("Count chars", t -> Integer.toString(t.length())),
+        LINE_COUNT("Count lines", t -> String.valueOf(t.chars().filter(value -> value == 10).count() + 1)),
+        ALPHA("alphabetical order", t -> Arrays.stream(t.split("[\n ]")).sorted().reduce("", (s, u) -> s += (" " + u))),
+        WORD_COUNT("word count", t -> Arrays.stream(t.split("[\n ]"))
+                .collect(Collectors.groupingBy(word -> word, Collectors.counting()))
+                .entrySet().stream()
+                .map(entry -> entry.getKey().concat(" -> ").concat(String.valueOf(entry.getValue())).concat("\n"))
+                .reduce("", String::concat));
 
         private final String commandName;
         private final Function<String, String> fun;
@@ -68,6 +80,7 @@ public final class LambdaFilter extends JFrame {
         final LayoutManager layout = new BorderLayout();
         panel1.setLayout(layout);
         final JComboBox<Command> combo = new JComboBox<>(Command.values());
+
         panel1.add(combo, BorderLayout.NORTH);
         final JPanel centralPanel = new JPanel(new GridLayout(1, 2));
         final JTextArea left = new JTextArea();
@@ -79,12 +92,9 @@ public final class LambdaFilter extends JFrame {
         centralPanel.add(right);
         panel1.add(centralPanel, BorderLayout.CENTER);
         final JButton apply = new JButton("Apply");
-        apply.addActionListener(ev ->
-            right.setText(
+        apply.addActionListener(ev -> right.setText(
                 ((Command) Objects.requireNonNull(combo.getSelectedItem()))
-                    .translate(left.getText())
-            )
-        );
+                        .translate(left.getText())));
         panel1.add(apply, BorderLayout.SOUTH);
         setContentPane(panel1);
         final Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
